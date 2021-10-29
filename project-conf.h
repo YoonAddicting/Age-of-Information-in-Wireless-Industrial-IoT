@@ -4,4 +4,5 @@
 #define LOG_CONF_LEVEL_TCPIP                       LOG_LEVEL_DBG
 #define LOG_CONF_LEVEL_MAC                         LOG_LEVEL_DBG
 #define LOG_CONF_LEVEL_FRAMER                      LOG_LEVEL_DBG
-#define CCFG_CONF_ROM_BOOTLOADER_ENABLE 	   1
+#define TSCH_LOG_CONF_PERLOT                     0
+#define NBR_TABLE_CONF_MAX_NEIGHBORS               6
