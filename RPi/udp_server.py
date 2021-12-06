@@ -5,7 +5,7 @@ try:
 	sys.modules['RPi'] = fake_rpi.RPi # Fake RPi
 	sys.modules['RPi.GPIO'] = fake_rpi.RPi.GPIO # Fake GPIO
 	import RPi.GPIO as GPIO
-except:
+except ImportError:
 	import RPi.GPIO as GPIO
 import datetime
 import socket
