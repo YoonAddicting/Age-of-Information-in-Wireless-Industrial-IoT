@@ -31,7 +31,13 @@ def signal_handler(sig, frame):
 	sys.exit(0)
 
 def sensor_sent_callback(channel):
-	print("sensor pin pulled up")
+	#print("sensor pin pulled up")
+	if not GPIO.input(SENSOR_GPIO):
+		print("Pin pulled high")
+	else:
+		print("Pin pulled low")
+
+
 
 def border_router_sent_callback(channel):
 	print("border router pin pulled up")
