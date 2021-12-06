@@ -1,44 +1,42 @@
 #include "contiki.h"
+// For routing
 #include "net/routing/routing.h"
-#include "random.h"
+// For MAC layer
 #include "net/netstack.h"
-#include "net/ipv6/simple-udp.h"
-#include "batmon-sensor.h" /* For temperature sensors */
-
 #include "os/net/mac/tsch/tsch.h"
-
+// For sending UDP packets over IPv6
+#include "net/ipv6/simple-udp.h"
 #include "os/net/ipv6/uiplib.h"
+
+// For GPIO
+#include "dev/gpio-hal.h"
+#include "arch/platform/simplelink/cc13xx-cc26xx/launchpad/cc2650/Board.h"
+
+// Project General
 #include "project-conf.h"
 
+// Setup for logging to serial 
 #include "sys/log.h"
-#define LOG_MODULE "App"
+#define LOG_MODULE "Sensor Node"
 #define LOG_LEVEL LOG_LEVEL_INFO
 
-#define WITH_SERVER_REPLY  1
 #define UDP_CLIENT_PORT	8765
 #define UDP_SERVER_PORT	5678
 
 #define SEND_INTERVAL		  (10 * CLOCK_SECOND)
 
-static struct simple_udp_connection udp_conn;
+static struct simple_udp_connection udp_conn; // UDP Connection
+
+gpio_hal_pin_t out_pin = Board_PIN_GLED; // Pin for green LED and DIO7
+
+#if GPIO_HAL_PORT_PIN_NUMBERING
+#define out_port   GPIO_HAL_NULL_PORT
+#endif
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
 /*---------------------------------------------------------------------------*/
-
-static void init_sensors(void){
-  SENSORS_ACTIVATE(batmon_sensor);
-}
-
-/*static void get_sync_sensor_readings(void){
-  int value;
-  printf("-----------------------------------------\n");
-  value = batmon_sensor.value(BATMON_SENSOR_TYPE_TEMP);
-  printf("Temp=%d C\n", value);
-  return;
-}*/
-
 static void
 udp_rx_callback(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -47,63 +45,51 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t receiver_port,
          const uint8_t *data,
          uint16_t datalen)
-{
-
-  LOG_INFO("Received response '%.*s' from ", datalen, (char *) data);
-  LOG_INFO_6ADDR(sender_addr);
-#if LLSEC802154_CONF_ENABLED
-  LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
-#endif
-  LOG_INFO_("\n");
-
-}
+        {
+          LOG_INFO("Received response '%.*s' from ", datalen, (char *) data);
+          LOG_INFO_6ADDR(sender_addr);
+          LOG_INFO_("\n");
+        }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_process, ev, data)
 {
-  static struct etimer periodic_timer;
-  static unsigned count;
-  static char str[32];
-  uip_ipaddr_t dest_ipaddr;
-  uip_ipaddr_t python_monitor;
+  static struct etimer periodic_timer; // Timer for sending data periodically
+  static char udp_buf[32]; // char[] buffer for sending data to RPi
+  static uip_ipaddr_t rpi_ip; // IP for the RPi
+  uiplib_ipaddrconv("fd00:0:0:0:0:0:0:1", &rpi_ip);
 
-  PROCESS_BEGIN();
+  PROCESS_BEGIN(); // Begin the process
 
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
 
-  init_sensors();
-  etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
+  /* Set a timer for SEND_INTERVAL seconds*/
+  etimer_set(&periodic_timer, SEND_INTERVAL);
 
-
+  /* Enable the TSCH layer*/
   NETSTACK_MAC.on();
-
-  
 
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
 
-    if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
-      /* Send to DAG root */
-      LOG_INFO("Sending request %u to ", count);
-      LOG_INFO_6ADDR(&dest_ipaddr);
+    if(NETSTACK_ROUTING.node_is_reachable()) {
+      /* Send ASN to RPi */
+      LOG_INFO("Send ASN to ");
+      LOG_INFO_6ADDR(&rpi_ip);
       LOG_INFO_("\n");
-      snprintf(str, sizeof(str), "hello %d, temp %d", count, batmon_sensor.value(BATMON_SENSOR_TYPE_TEMP));
-      simple_udp_sendto(&udp_conn, str, strlen(str), &dest_ipaddr);
-      uiplib_ipaddrconv("fd00:0:0:0:0:0:0:1", &python_monitor);
-      LOG_INFO("And asn to ");
-      LOG_INFO_6ADDR(&python_monitor);
-      LOG_INFO("\n");
-      snprintf(str, sizeof(str), "msb: %d, lsb: %ld", tsch_current_asn.ms1b, tsch_current_asn.ls4b);
-      simple_udp_sendto(&udp_conn, str, strlen(str), &python_monitor);
-      count++;
+      snprintf(udp_buf, sizeof(udp_buf), "msb: %d, lsb: %ld", tsch_current_asn.ms1b, tsch_current_asn.ls4b);
+      gpio_hal_arch_write_pin(out_port, out_pin, 1);
+      LOG_INFO("Pulled DIO7 high\n");
+      simple_udp_sendto(&udp_conn, udp_buf, strlen(udp_buf), &rpi_ip);
+      gpio_hal_arch_write_pin(out_port, out_pin, 0);
+      LOG_INFO("Pulled DIO7 low\n");
     } else {
-      LOG_INFO("Not reachable yet\n");
+      LOG_INFO("RPi is not reachable yet\n");
     }
 
-    /* Add some jitter */
-    etimer_set(&periodic_timer, SEND_INTERVAL
-      - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
+    /* Reset timer */
+    etimer_set(&periodic_timer, SEND_INTERVAL);
   }
 
   PROCESS_END();
