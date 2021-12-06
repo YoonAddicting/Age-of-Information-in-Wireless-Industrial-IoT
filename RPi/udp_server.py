@@ -48,8 +48,8 @@ def main():
 	sock.bind((UDP_IP, UDP_PORT))
 	
 	GPIO.setmode(GPIO.BCM)
-	GPIO.setup(SENSOR_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-	GPIO.setup(BORDER_ROUTER_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+	GPIO.setup(SENSOR_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+	GPIO.setup(BORDER_ROUTER_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 	GPIO.add_event_detect(SENSOR_GPIO, GPIO.BOTH, callback=sensor_sent_callback)
 	GPIO.add_event_detect(BORDER_ROUTER_GPIO, GPIO.RISING, callback=border_router_sent_callback)
 
