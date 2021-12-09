@@ -87,9 +87,9 @@ def main():
 			ASN_SENSOR = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
 			print("TIME_SENSOR_INT: ", TIME_SENSOR_INT, "\nTIME_SENSOR_REC: ", TIME_SENSOR_REC, "\nDiff: ", (TIME_SENSOR_REC-TIME_SENSOR_INT), "\nConverted to floating point: ", (TIME_SENSOR_REC-TIME_SENSOR_INT) / (10**9))
 			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC) #/ (10 ** 9) # Convert time_ns result into floating point seconds
-			err_bench.write(str(err_bench_data + "\n")) # Write in ns to debug
+			err_bench.write(str(err_bench_data) + "\n") # Write in ns to debug
 			#err_bench.write(f"{err_bench_data:.9f}"+ "\n")
-			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC, "\n", f"{err_bench_data:.9f}")
+			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC, "\n", err_bench_data)#f"{err_bench_data:.9f}")
 		elif(addr[0] == BORDER_ROUTER_IP): # If sent from border router 
 			TIME_BORDER_ROUTER_REC = time.time_ns() #datetime.utcnow() # Update the time of the received ASN
 			ASN_BORDER_ROUTER = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
