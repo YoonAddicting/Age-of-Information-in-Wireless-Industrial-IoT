@@ -29,9 +29,9 @@ SENSOR_GPIO = 5 # GPIO pin to listen on for the sensor
 BORDER_ROUTER_GPIO = 6 # GPIO pin to listen on for the border router
 
 err_bench = open(f"{date.today().year:02}" + f"{date.today().month:02}" + f"{date.today().day:02}" + "_" +
-            f"{datetime.now().hour:02}" + f"{datetime.now().minute:02}" + f"{datetime.now().second:02}" + "_bench.txt",'w')
+            f"{datetime.now().hour:02}" + f"{datetime.now().minute:02}" + f"{datetime.now().second:02}" + "_bench.txt",'w', buffering=512)
 err_pred = open(f"{date.today().year:02}" + f"{date.today().month:02}" + f"{date.today().day:02}" + "_" +
-            f"{datetime.now().hour:02}" + f"{datetime.now().minute:02}" + f"{datetime.now().second:02}" + "_pred.txt",'w')
+            f"{datetime.now().hour:02}" + f"{datetime.now().minute:02}" + f"{datetime.now().second:02}" + "_pred.txt",'w', buffering=512)
 
 def sigint_handler(sig, frame):
 	global err_bench
