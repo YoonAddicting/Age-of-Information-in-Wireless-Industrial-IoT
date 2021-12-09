@@ -46,13 +46,13 @@ def sigint_handler(sig, frame):
 def int_sensor_callback(channel):
 	# Update the time for the last interupt received
 	global TIME_SENSOR_INT
-	TIME_SENSOR_INT = datetime.datetime()
+	TIME_SENSOR_INT = datetime.utcnow()
 	print("Sensor pin pulled")
 
 def int_border_router_callback(channel):
 	# Update the time for the last interupt received
 	global TIME_BORDER_ROUTER_INT 
-	TIME_BORDER_ROUTER_INT = datetime.datetime()
+	TIME_BORDER_ROUTER_INT = datetime.utcnow()
 	print("Border Router pin pulled")
 
 def main():
