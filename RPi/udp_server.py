@@ -71,8 +71,8 @@ def main():
 	GPIO.setmode(GPIO.BCM) # Access pins by the Broadcom SOC channel
 	GPIO.setup(SENSOR_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Set to expect to be pulled low
 	GPIO.setup(BORDER_ROUTER_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Set to expect to be pulled low
-	GPIO.add_event_detect(SENSOR_GPIO, GPIO.FALLING, callback=int_sensor_callback) # Detect interupt event when the GPIO pin of the sensor is falling, and call int_sensor_callback
-	GPIO.add_event_detect(BORDER_ROUTER_GPIO, GPIO.FALLING, callback=int_border_router_callback) # Detect interupt event when the GPIO pin of the border router is falling, and call int_border_router_callback
+	GPIO.add_event_detect(SENSOR_GPIO, GPIO.FALLING, callback=int_sensor_callback, bouncetime=100) # Detect interupt event when the GPIO pin of the sensor is falling, and call int_sensor_callback
+	GPIO.add_event_detect(BORDER_ROUTER_GPIO, GPIO.FALLING, callback=int_border_router_callback, bouncetime=100) # Detect interupt event when the GPIO pin of the border router is falling, and call int_border_router_callback
 
 	signal.signal(signal.SIGINT, sigint_handler) # Handle if a SIGINT (ctrl+c) is received
 
@@ -84,7 +84,7 @@ def main():
 		if(addr[0] == SENSOR_IP): # If sent from sensor
 			TIME_SENSOR_REC = datetime.utcnow() # Update the time of received ASN
 			ASN_SENSOR = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
-			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC).total_seconds
+			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC).total_seconds()
 			err_bench.write(str(err_bench_data)+"\n")
 			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC, "\n", err_bench_data)
 		elif(addr[0] == BORDER_ROUTER_IP): # If sent from border router 
