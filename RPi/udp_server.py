@@ -1,4 +1,4 @@
-import sys
+import sys #To import the fake_rpi module and exit.
 try: #If run on MacOS
 	import fake_rpi
 	sys.modules['RPi'] = fake_rpi.RPi # Fake RPi
@@ -6,58 +6,87 @@ try: #If run on MacOS
 	import RPi.GPIO as GPIO
 except ModuleNotFoundError: #If run on RPi
 	import RPi.GPIO as GPIO
-import datetime
-import socket
-import re
-from datetime import date, datetime
-import signal
+import datetime # For getting the system time
+import socket # To open a network connection
+import re # To regex split the incomming data
+from datetime import date, datetime # For getting the system time
+import signal # To properly handle SIGINT (ctrl+c)
   
-UDP_IP = "::" # = 0.0.0.0 in IPv4
-UDP_PORT = 5678
-SENSOR_IP = "fd00::212:4b00:f8e:2584"
-BORDER_ROUTER_IP = "fd00::212:4b00:f19:b001"
-TIME_BORDER_ROUTER_INT = datetime.utcnow()
-TIME_BORDER_ROUTER_REC = datetime.utcnow()
-TIME_SENSOR_INT = datetime.utcnow()
-TIME_SENSOR_REC = datetime.utcnow()
-ASN_BORDER_ROUTER = 0
-ASN_SENSOR = 0
+UDP_IP = "::" # Receive from all IPs
+UDP_PORT = 5678 # Port to listen on
+SENSOR_IP = "fd00::212:4b00:f8e:2584" # IPv6 address of the sensor
+BORDER_ROUTER_IP = "fd00::212:4b00:f19:b001" # IPv6 address of the border router
+TIME_BORDER_ROUTER_INT = datetime.utcnow() # Store the time of the received interupt from border router
+TIME_BORDER_ROUTER_REC = datetime.utcnow() # Store the time of the received package from border router
+TIME_SENSOR_INT = datetime.utcnow() # Store the time of the received interupt from snesor
+TIME_SENSOR_REC = datetime.utcnow() # Store the time of the received package from sensor
+ASN_BORDER_ROUTER = 0 # Store the last received ASN of the border router
+ASN_SENSOR = 0 # Store the last received ASN of the sensor
+SLOT_DURRATION = 0.010 # TSCH Slot duration
 
-SENSOR_GPIO = 5 
-BORDER_ROUTER_GPIO = 6
+SENSOR_GPIO = 5 # GPIO pin to listen on for the sensor
+BORDER_ROUTER_GPIO = 6 # GPIO pin to listen on for the border router
 
-def signal_handler(sig, frame):
+err_bench = open("bench_" + date.today().year + date.today().month + date.today().day + "_" + datetime.now().hour + datetime.now().minute + datetime.now().second + ".txt",'w')
+err_pred = open("pred_" + date.today().year + date.today().month + date.today().day + "_" + datetime.now().hour + datetime.now().minute + datetime.now().second + ".txt",'w')
+
+def sigint_handler(sig, frame):
+	global err_bench
+	global err_pred
+	GPIO.remove_event_detect(SENSOR_GPIO)
+	GPIO.remove_event_detect(BORDER_ROUTER_GPIO)
 	GPIO.cleanup()
+	# Close the files properly
+	err_bench.close()
+	err_pred.close()
 	sys.exit(0)
 
-def sensor_sent_callback(channel):
-	print("Sensor pin pulled low")
+def int_sensor_callback(channel):
+	# Update the time for the last interupt received
+	global TIME_SENSOR_INT
+	TIME_SENSOR_INT = datetime.datetime()
+	print("Sensor pin pulled")
 
-def border_router_sent_callback(channel):
-	print("Border Router pin pulled low")
+def int_border_router_callback(channel):
+	# Update the time for the last interupt received
+	global TIME_BORDER_ROUTER_INT 
+	TIME_BORDER_ROUTER_INT = datetime.datetime()
+	print("Border Router pin pulled")
 
 def main():
-	sock = socket.socket(socket.AF_INET6, # Internet
-						socket.SOCK_DGRAM) # UDP
-	sock.bind((UDP_IP, UDP_PORT))
-	
-	GPIO.setmode(GPIO.BCM)
-	GPIO.setup(SENSOR_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-	GPIO.setup(BORDER_ROUTER_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-	GPIO.add_event_detect(SENSOR_GPIO, GPIO.FALLING, callback=sensor_sent_callback)
-	GPIO.add_event_detect(BORDER_ROUTER_GPIO, GPIO.FALLING, callback=border_router_sent_callback)
+	# Access the global variables 
+	global TIME_BORDER_ROUTER_INT
+	global TIME_BORDER_ROUTER_REC
+	global TIME_SENSOR_INT
+	global TIME_SENSOR_REC
+	global ASN_BORDER_ROUTER
+	global ASN_SENSOR
 
-	signal.signal(signal.SIGINT, signal_handler)
+	sock = socket.socket(socket.AF_INET6, # IPv6
+						socket.SOCK_DGRAM) # UDP
+	sock.bind((UDP_IP, UDP_PORT)) # Open the connection
+	
+	GPIO.setmode(GPIO.BCM) # Access pins by the Broadcom SOC channel
+	GPIO.setup(SENSOR_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Set to expect to be pulled low
+	GPIO.setup(BORDER_ROUTER_GPIO, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Set to expect to be pulled low
+	GPIO.add_event_detect(SENSOR_GPIO, GPIO.FALLING, callback=int_sensor_callback) # Detect interupt event when the GPIO pin of the sensor is falling, and call int_sensor_callback
+	GPIO.add_event_detect(BORDER_ROUTER_GPIO, GPIO.FALLING, callback=int_border_router_callback) # Detect interupt event when the GPIO pin of the border router is falling, and call int_border_router_callback
+
+	signal.signal(signal.SIGINT, sigint_handler) # Handle if a SIGINT (ctrl+c) is received
+
+	# TODO: Do different stuff depending on mode
 	
 	while True:
 		data, addr = sock.recvfrom(1024) # Receive data from socket, buffersize 1024 bytes
-		data_split = re.split(': |, ', data.decode('utf-8')) # Interpret data
-		if(addr[0] == SENSOR_IP):
-			TIME_SENSOR_REC = datetime.utcnow()
+		data_split = re.split(': |, ', data.decode('utf-8')) # Split data into array by RegEx
+		if(addr[0] == SENSOR_IP): # If sent from sensor
+			TIME_SENSOR_REC = datetime.utcnow() # Update the time of received ASN
 			ASN_SENSOR = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
-			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC)
-		elif(addr[0] == BORDER_ROUTER_IP):
-			TIME_BORDER_ROUTER_REC = datetime.utcnow()
+			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC).seconds
+			err_bench.write(err_bench_data+"\n")
+			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC, "\n", err_bench_data)
+		elif(addr[0] == BORDER_ROUTER_IP): # If sent from border router 
+			TIME_BORDER_ROUTER_REC = datetime.utcnow() # Update the time of the received ASN
 			ASN_BORDER_ROUTER = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
 			print("Border Router ASN:", ASN_BORDER_ROUTER, "Timestamp:", TIME_BORDER_ROUTER_REC)
 
