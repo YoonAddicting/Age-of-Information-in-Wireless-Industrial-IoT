@@ -10,16 +10,17 @@ import datetime # For getting the system time
 import socket # To open a network connection
 import re # To regex split the incomming data
 from datetime import date, datetime # For getting the system time
+import time # High resolution time since epoch
 import signal # To properly handle SIGINT (ctrl+c)
   
 UDP_IP = "::" # Receive from all IPs
 UDP_PORT = 5678 # Port to listen on
 SENSOR_IP = "fd00::212:4b00:f8e:2584" # IPv6 address of the sensor
 BORDER_ROUTER_IP = "fd00::212:4b00:f19:b001" # IPv6 address of the border router
-TIME_BORDER_ROUTER_INT = datetime.utcnow() # Store the time of the received interupt from border router
-TIME_BORDER_ROUTER_REC = datetime.utcnow() # Store the time of the received package from border router
-TIME_SENSOR_INT = datetime.utcnow() # Store the time of the received interupt from snesor
-TIME_SENSOR_REC = datetime.utcnow() # Store the time of the received package from sensor
+TIME_BORDER_ROUTER_INT = time.time_ns()#datetime.utcnow() # Store the time of the received interupt from border router
+TIME_BORDER_ROUTER_REC = time.time_ns() # Store the time of the received package from border router
+TIME_SENSOR_INT = time.time_ns() # Store the time of the received interupt from snesor
+TIME_SENSOR_REC = time.time_ns() # Store the time of the received package from sensor
 ASN_BORDER_ROUTER = 0 # Store the last received ASN of the border router
 ASN_SENSOR = 0 # Store the last received ASN of the sensor
 SLOT_DURRATION = 0.010 # TSCH Slot duration
@@ -46,13 +47,13 @@ def sigint_handler(sig, frame):
 def int_sensor_callback(channel):
 	# Update the time for the last interupt received
 	global TIME_SENSOR_INT
-	TIME_SENSOR_INT = datetime.utcnow()
+	TIME_SENSOR_INT = time.time_ns() #datetime.utcnow()
 	print("Sensor pin pulled")
 
 def int_border_router_callback(channel):
 	# Update the time for the last interupt received
 	global TIME_BORDER_ROUTER_INT 
-	TIME_BORDER_ROUTER_INT = datetime.utcnow()
+	TIME_BORDER_ROUTER_INT = time.time_ns() #datetime.utcnow()
 	print("Border Router pin pulled")
 
 def main():
@@ -82,13 +83,13 @@ def main():
 		data, addr = sock.recvfrom(1024) # Receive data from socket, buffersize 1024 bytes
 		data_split = re.split(': |, ', data.decode('utf-8')) # Split data into array by RegEx
 		if(addr[0] == SENSOR_IP): # If sent from sensor
-			TIME_SENSOR_REC = datetime.utcnow() # Update the time of received ASN
+			TIME_SENSOR_REC = time.time_ns() #datetime.utcnow() # Update the time of received ASN
 			ASN_SENSOR = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
-			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC).total_seconds()
+			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC) / (10 ** 9) # Convert time_ns result into floating point seconds
 			err_bench.write(str(err_bench_data)+"\n")
 			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC, "\n", err_bench_data)
 		elif(addr[0] == BORDER_ROUTER_IP): # If sent from border router 
-			TIME_BORDER_ROUTER_REC = datetime.utcnow() # Update the time of the received ASN
+			TIME_BORDER_ROUTER_REC = time.time_ns() #datetime.utcnow() # Update the time of the received ASN
 			ASN_BORDER_ROUTER = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
 			print("Border Router ASN:", ASN_BORDER_ROUTER, "Timestamp:", TIME_BORDER_ROUTER_REC)
 
