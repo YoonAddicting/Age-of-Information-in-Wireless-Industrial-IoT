@@ -27,10 +27,10 @@ SLOT_DURRATION = 0.010 # TSCH Slot duration
 SENSOR_GPIO = 5 # GPIO pin to listen on for the sensor
 BORDER_ROUTER_GPIO = 6 # GPIO pin to listen on for the border router
 
-err_bench = open("bench_" + str(date.today().year) + str(date.today().month) + str(date.today().day) + "_" +
-            str(datetime.now().hour) + str(datetime.now().minute) + str(datetime.now().second) + ".txt",'w')
-err_pred = open("pred_" + str(date.today().year) + str(date.today().month) + str(date.today().day) + "_" +
-            str(datetime.now().hour) + str(datetime.now().minute) + str(datetime.now().second) + ".txt",'w')
+err_bench = open(f"{date.today().year:02}" + f"{date.today().month:02}" + f"{date.today().day:02}" + "_" +
+            f"{datetime.now().hour:02}" + f"{datetime.now().minute:02}" + f"{datetime.now().second:02}" + "_bench.txt",'w')
+err_pred = open(f"{date.today().year:02}" + f"{date.today().month:02}" + f"{date.today().day:02}" + "_" +
+            f"{datetime.now().hour:02}" + f"{datetime.now().minute:02}" + f"{datetime.now().second:02}" + "_pred.txt",'w')
 
 def sigint_handler(sig, frame):
 	global err_bench
@@ -84,7 +84,7 @@ def main():
 		if(addr[0] == SENSOR_IP): # If sent from sensor
 			TIME_SENSOR_REC = datetime.utcnow() # Update the time of received ASN
 			ASN_SENSOR = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
-			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC).seconds
+			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC).total_seconds
 			err_bench.write(str(err_bench_data)+"\n")
 			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC, "\n", err_bench_data)
 		elif(addr[0] == BORDER_ROUTER_IP): # If sent from border router 
