@@ -370,3 +370,5 @@ tests/18-coap-lwm2m/leshan-server-demo*.jar
 .vscode/
 eraseAndFlash.sh
 login_*
+pred_*
+bench_*
