@@ -68,9 +68,9 @@ def main(argv):
         data_file.close()
 
     
-
+    # TODO: Add a smooth curve over the histogram
     # Do the plot
-    N, bins, patches = plt.hist(dist, bins=n_bins, density=True)
+    N, bins, patches = plt.hist(dist, weights=np.ones(len(dist)) / len(dist),bins=n_bins, density=False) # Fixed total percentage with https://stackoverflow.com/a/51477080 
     plt.title(plot_title)
     plt.xlabel(x_axis)
     plt.ylabel(y_axis)
