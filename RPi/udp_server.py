@@ -23,7 +23,7 @@ TIME_SENSOR_INT = time.time_ns() # Store the time of the received interupt from 
 TIME_SENSOR_REC = time.time_ns() # Store the time of the received package from sensor
 ASN_BORDER_ROUTER = 0 # Store the last received ASN of the border router
 ASN_SENSOR = 0 # Store the last received ASN of the sensor
-SLOT_DURATION = 10 ** 6 # TSCH Slot duration in ns
+SLOT_DURATION = 10000000 # TSCH Slot duration in ns
 
 SENSOR_GPIO = 5 # GPIO pin to listen on for the sensor
 BORDER_ROUTER_GPIO = 6 # GPIO pin to listen on for the border router
@@ -86,7 +86,8 @@ def main():
 			ASN_SENSOR = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
 			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_INT) / (10 ** 6) # Convert time_ns result into floating point milliseconds
 			err_bench.write(f"{err_bench_data:.5f}" + "\n")
-			time_sensor_pred = TIME_BORDER_ROUTER_INT + (ASN_SENSOR - ASN_BORDER_ROUTER) * SLOT_DURATION # Predicted time the package were sent from the sensor
+			print("ASN Sensor: {}\nASN Border Router: {}".format(ASN_SENSOR, ASN_BORDER_ROUTER))
+			time_sensor_pred = TIME_BORDER_ROUTER_INT + ((ASN_SENSOR - ASN_BORDER_ROUTER) * SLOT_DURATION) # Predicted time the package were sent from the sensor
 			err_pred_data = (time_sensor_pred - TIME_SENSOR_INT) / (10 ** 6)
 			err_pred.write(f"{err_pred_data:.5f}" + "\n")
 			print("Sensor ASN: {}\nTimestamp: {}\nError benchmark: {:.5f}\nError of prediction: {:.5f}".format(ASN_SENSOR, TIME_SENSOR_REC, err_bench_data, err_pred_data))
