@@ -48,13 +48,13 @@ def int_sensor_callback(channel):
 	# Update the time for the last interupt received
 	global TIME_SENSOR_INT
 	TIME_SENSOR_INT = time.time_ns() #datetime.utcnow()
-	print("Sensor pin pulled")
+	#print("Sensor pin pulled")
 
 def int_border_router_callback(channel):
 	# Update the time for the last interupt received
 	global TIME_BORDER_ROUTER_INT 
 	TIME_BORDER_ROUTER_INT = time.time_ns() #datetime.utcnow()
-	print("Border Router pin pulled")
+	#print("Border Router pin pulled")
 
 def main():
 	# Access the global variables 
@@ -85,6 +85,7 @@ def main():
 		if(addr[0] == SENSOR_IP): # If sent from sensor
 			TIME_SENSOR_REC = time.time_ns() #datetime.utcnow() # Update the time of received ASN
 			ASN_SENSOR = (int(data_split[1]) << 32) + int(data_split[3]) # Bitshift msb 4 bytes to the left and add with lsb to get full ASN
+			print("TIME_SENSOR_INT: ", TIME_SENSOR_INT, "\n TIME_SENSOR_REC: ", TIME_SENSOR_REC, "\n Diff: ", (TIME_SENSOR_REC-TIME_SENSOR_INT), "\n Converted to floating point: ", (TIME_SENSOR_REC-TIME_SENSOR_INT) / (10**9))
 			err_bench_data = (TIME_SENSOR_REC - TIME_SENSOR_REC) / (10 ** 9) # Convert time_ns result into floating point seconds
 			err_bench.write(str(err_bench_data)+"\n")
 			print("Sensor ASN:", ASN_SENSOR, "Timestamp:", TIME_SENSOR_REC, "\n", err_bench_data)
