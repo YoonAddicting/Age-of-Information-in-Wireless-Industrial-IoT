@@ -372,5 +372,6 @@ eraseAndFlash.sh
 login_*
 pred_*
 bench_*
-*_pred.txt
-*_bench.txt
+*_pred*.txt
+*_bench*.txt
+*.pdf
