@@ -1,5 +1,4 @@
 MAKE_MAC = MAKE_MAC_TSCH
-# MODULES += os/services/shell
 
 CONTIKI_PROJECT = border_router
 all: $(CONTIKI_PROJECT)
@@ -13,8 +12,6 @@ BOARDS_EXCLUDE = nrf52840/dongle
 # Include RPL BR module
 include $(CONTIKI)/Makefile.dir-variables
 MODULES += $(CONTIKI_NG_SERVICES_DIR)/rpl-border-router
-# Include webserver module
-MODULES_REL += webserver
 # Include optional target-specific module
 include $(CONTIKI)/Makefile.identify-target
 MODULES_REL += $(TARGET)
