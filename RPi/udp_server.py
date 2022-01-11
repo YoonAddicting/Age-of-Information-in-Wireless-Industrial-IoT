@@ -74,9 +74,6 @@ def main():
 	GPIO.add_event_detect(BORDER_ROUTER_GPIO, GPIO.FALLING, callback=int_border_router_callback, bouncetime=200) # Detect interupt event when the GPIO pin of the border router is falling, and call int_border_router_callback
 
 	signal.signal(signal.SIGINT, sigint_handler) # Handle if a SIGINT (ctrl+c) is received
-
-	# TODO: Do different stuff depending on mode
-	# TODO: Implement way to stop after x samples
 	
 	while True:
 		data, addr = sock.recvfrom(1024) # Receive data from socket, buffersize 1024 bytes
