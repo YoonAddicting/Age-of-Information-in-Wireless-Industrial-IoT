@@ -4,7 +4,7 @@ from matplotlib.ticker import PercentFormatter
 import numpy as np
 import sys
 import getopt
-import pandas as pd
+import seaborn as sns
 
 clrs = [
           (121/255, 35/255, 142/255), # Purple
@@ -20,73 +20,124 @@ clrs = [
 
 def main(argv):
     # Handle input arguments
-    inputfile = ''
-    outputfile = 'test.pdf'
+    linputfile = ''
+    rinputfile = ''
+    oname = 'sample'
     plot_title = 'Histogram Plot'
-    x_axis = ''
+    x_axis = 'Milliseconds [ms]'
     y_axis = ''
 
     try:
-        opts, args = getopt.getopt(argv,"ht:x:y:i:o:",longopts=["help","title=","x-axis=","y-axis=","ifile=","ofile="])
+        opts, args = getopt.getopt(argv,"hl:r:o:",longopts=["help","lifile=","rifile=","oname="])
     except getopt.GetoptError as err:
-        print('dataprocessing.py -i <inputfile> -o <outputfile>')
+        print('dataprocessing.py -l <left_inputfile> -r <right_inputfile> -o <outputname>')
         sys.exit(2)
 
     for opt,arg in opts:
         if opt in ('-h', '--help'):
-            print('dataprocessing.py -i <inputfile> -o <outputfile> -t <title> -x <x-axis name> -y <y-axis name>')
+            print('dataprocessing.py -l <left_inputfile> -r <right_inputfile> -o <outputname>')
             sys.exit()
-        elif opt in ('-i', '--ifile'):
-            inputfile = arg
-        elif opt in ('-o', '--ofile'):
-            outputfile = arg
-        elif opt in ('-t', '--title'):
-            plot_title = arg
-        elif opt in ('-x', '--x-axis'):
-            x_axis = arg
-        elif opt in ('-y', '--y-axis'):
-            y_axis = arg
+        elif opt in ('-l', '--lifile'):
+            linputfile = arg
+        elif opt in ('-r', '--rifile'):
+            rinputfile = arg
+        elif opt in ('-o', '--oname'):
+            oname = arg
     
-    print("input file: {}, output file: {}, title: {}, x-axis: {}, y-axis: {}".format(inputfile,outputfile,plot_title,x_axis,y_axis))
+    # Load the data from the files
+    data_file1 = open(linputfile, 'r')
+    data_left = data_file1.readlines()
+    data_file1.close()
+    data_file2 = open(rinputfile, 'r')
+    data_right = data_file2.readlines()
+    data_file2.close()
 
+    # ------- HISTOGRAM -------
     # Set number of columns
-    n_bins = 10
+    n_bins = 40
 
     # Creating a DTU Colormap
     cmap = colors.LinearSegmentedColormap.from_list('DTU_Colors', clrs, n_bins)
 
-    if inputfile == '':
-        # Generate random data for sample
-        rng = np.random.default_rng(19680801)
-        N_points = 100000
-        dist = 10* rng.standard_normal(N_points)
-    else:
-        # Load the data from the file and save in dist
-        data_file = open(inputfile, 'r')
-        data = data_file.readlines()
-        dist = np.array(data,dtype=np.float64)
-        data_file.close()
+    # Save the data in numpy arrays
+    dist_left = np.array(data_left,dtype=np.float64)
+    dist_right = np.array(data_right, dtype=np.float64)
 
-    
-    # TODO: Add a smooth curve over the histogram
-    # Do the plot
-    N, bins, patches = plt.hist(dist, weights=np.ones(len(dist)) / len(dist),bins=n_bins, density=False) # Fixed total percentage with https://stackoverflow.com/a/51477080 
-    plt.title(plot_title)
-    plt.xlabel(x_axis)
-    plt.ylabel(y_axis)
+    fig, (axis_left, axis_right) = plt.subplots(1,2,figsize=(16,6), sharex=True, sharey=True)
+    fig.suptitle("Histogram " + oname)
+    bins = np.linspace(-50, 150, n_bins)
 
-    # Normalize and plot with y-axis being % of total
-    fracs = N/N.max()
-    norm = colors.Normalize(fracs.min(), fracs.max())
-    for thisfrac, thispatch in zip(fracs, patches):
-        color = cmap(norm(thisfrac))
+    # Left histogram
+    N_left, bins_left, patches_left = axis_left.hist(dist_left, bins=bins, density=True)
+    axis_left.set_title("Error of Benchmark")
+    axis_left.set_xlabel("Milliseconds [ms]")
+    axis_left.set_ylabel("Density")
+    # Right histogram
+    N_right, bins_right, patches_right = axis_right.hist(dist_right, bins=bins, density=True)
+    axis_right.set_title("Error of Prediction")
+    axis_right.set_xlabel("Milliseconds [ms]")
+    #axis_right.set_ylabel("Density")
+
+    # Color with regards to density
+    fracs_left = N_left/N_left.max()
+    norm_left = colors.Normalize(fracs_left.min(), fracs_left.max())
+    for thisfrac, thispatch in zip(fracs_left, patches_left):
+        color = cmap(norm_left(thisfrac))
         thispatch.set_facecolor(color)
-    plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
+    axis_left.yaxis.set_major_formatter(PercentFormatter(1))
     
-    #plt.show()
+    fracs_right = N_right/N_right.max()
+    norm_right = colors.Normalize(fracs_right.min(), fracs_right.max())
+    for thisfrac, thispatch in zip(fracs_right, patches_right):
+        color = cmap(norm_right(thisfrac))
+        thispatch.set_facecolor(color)
+    axis_right.yaxis.set_major_formatter(PercentFormatter(1))
 
+    plt.tight_layout()
+    #plt.show()
     # Save the plot to a pdf
-    plt.savefig(outputfile)
+    plt.savefig(oname + "_hist.pdf")
+    plt.clf()
+    fig = plt.figure(figsize=(8,6))
+
+    # ------ KDE PLOT ------
+    plt.title("KDE Plot " + oname)
+    sns.kdeplot(dist_left, shade = True, linewidth = 1, clip = (-60, 150),color=clrs[2], label="Error of Benchmark")
+    sns.kdeplot(dist_right, shade = True, linewidth = 1, clip = (-60, 150),color=clrs[-3], label="Error of Prediction")
+    plt.xticks(np.arange(-60,150,20))
+    plt.xlabel("Milliseconds [ms]")
+    plt.ylabel("Density")
+    plt.legend(loc=2)
+    #plt.show()
+    plt.savefig(oname + "_KDE.pdf")
+    plt.clf()
+
+    # ------ CDF PLOT ------
+    plt.title("CDF Plot " + oname)
+    sns.kdeplot(dist_left, shade = True, linewidth = 1, clip = (-50, 150),color=clrs[2], cumulative=True, label="Error of Benchmark")
+    sns.kdeplot(dist_right, shade = True, linewidth = 1, clip = (-50, 150),color=clrs[-3], cumulative=True, label="Error of Prediction")
+    plt.xlabel("Milliseconds [ms]")
+    plt.ylabel("Density")
+    plt.legend(loc=2)
+    #plt.show()
+    plt.savefig(oname + "_CDF.pdf")
+    plt.clf()
+
+    # ------ BOX PLOT -------
+    plt.title("Box Plot " + oname)
+    sns.boxplot(data=[dist_left, dist_left],
+        palette=[clrs[2], clrs[-3]]
+    )
+
+    plt.tick_params(labelbottom=True, labeltop=False, labelleft=True, labelright=True,
+                     bottom=True, top=False, left=True, right=True)
+    plt.yticks(np.arange(-50,400,25))
+    plt.ylabel("Milliseconds [ms]")
+    plt.xticks([0,1],["Error of Benchmark", "Error of Prediction"])
+    #plt.show()
+    plt.savefig(oname + "_box.pdf")
+    plt.clf()
+
     return
 
 if __name__ == "__main__":
