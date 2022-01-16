@@ -1,19 +1,5 @@
-A minimal Contiki-NG example, simple printing out "Hello, world".
-This example runs a full IPv6 stack with 6LoWPAN and RPL.
-It is possible, for example to ping such a node:
+This project has been develop as part of my B.Sc.Eng. Thesis in Software Technology.
 
-```
-make TARGET=native && sudo ./hello-world.native
-```
+In order to run this project, place the folder in the root of a contiki-ng folder.
 
-Look for the node's global IPv6, e.g.:
-```
-[INFO: Native    ] Added global IPv6 address fd00::302:304:506:708
-```
-
-And ping it (over the tun interface):
-```
-$ ping6 fd00::302:304:506:708
-PING fd00::302:304:506:708(fd00::302:304:506:708) 56 data bytes
-64 bytes from fd00::302:304:506:708: icmp_seq=1 ttl=64 time=0.289 ms
-```
+It has been implemented with the Texas Instruments CC2650 Launchpad, with one device acting as the border router and another as the sensor.
